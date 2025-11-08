@@ -2,10 +2,11 @@
 import mysql from "mysql2/promise";
 
 const db = await mysql.createPool({
-  host: "localhost",
-  user: "root", // change if needed
-  password: "", // your MySQL password
-  database: "rideshare", // your database name
+  host: "mysql.railway.internal:3306",
+  user: "root",
+  password: "skPnJlPFlzhhMycuFTacqFokokbrXcLt", 
+  database: "rideshare",
 });
 
+// mysql://root:skPnJlPFlzhhMycuFTacqFokokbrXcLt@mysql.railway.internal:3306/rideshare
 export default db;
