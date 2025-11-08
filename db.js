@@ -2,13 +2,14 @@
 import mysql from "mysql2/promise";
 
 const db = await mysql.createPool({
-  host: "mysql.railway.internal",
+  host: "hopper.proxy.rlwy.net",
   user: "root",
   password: "skPnJlPFlzhhMycuFTacqFokokbrXcLt", 
   database: "rideshare",
-  port: "3306",
+  port: "58654",
 });
 
-// mysql://root:skPnJlPFlzhhMycuFTacqFokokbrXcLt@mysql.railway.internal:3306/rideshare
+// mysql://root:skPnJlPFlzhhMycuFTacqFokokbrXcLt@hopper.proxy.rlwy.net:58654/rideshare
 export default db;
+
 
