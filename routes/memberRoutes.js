@@ -58,18 +58,26 @@ router.post("/", async (req, res) => {
 });
 
 // 📋 Get all members of a specific group
-router.get("/group/:group_id", (req, res) => {
-  const { group_id } = req.params;
-
-  const query = "SELECT * FROM group_members WHERE group_id = ?";
-  db.query(query, [group_id], (err, results) => {
-    if (err) {
+router.get("/group/:group_id", async (req, res) => {
+    try {
+      const { group_id } = req.params;
+      const [rows] = await db.query("SELECT * FROM group_members WHERE group_id = ?");
+      res.json(rows[0] || {});
+    } catch (err) {
       console.error("❌ Error fetching members:", err);
       res.status(500).json({ error: "Database error" });
-    } else {
-      res.json(results);
     }
-  });
+    
+  // const { group_id } = req.params;
+  // const [results] = await db.query("SELECT * FROM group_members WHERE group_id = ?");
+  // db.query(query, [group_id], (err, results) => {
+  //   if (err) {
+  //     console.error("❌ Error fetching members:", err);
+  //     res.status(500).json({ error: "Database error" });
+  //   } else {
+  //     res.json(results);
+  //   }
+  // });
 });
 
 // kachra 1 was were
