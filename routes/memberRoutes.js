@@ -61,23 +61,12 @@ router.post("/", async (req, res) => {
 router.get("/group/:group_id", async (req, res) => {
     try {
       const { group_id } = req.params;
-      const [rows] = await db.query("SELECT * FROM group_members WHERE group_id = ?"); // , [group_id]
+      const [rows] = await db.query("SELECT * FROM group_members WHERE group_id = ?", [group_id]);
       res.json(rows || {});
     } catch (err) {
       console.error("❌ Error fetching members:", err);
       res.status(500).json({ error: "Database error" });
     }
-    
-  // const { group_id } = req.params;
-  // const [results] = await db.query("SELECT * FROM group_members WHERE group_id = ?");
-  // db.query(query, [group_id], (err, results) => {
-  //   if (err) {
-  //     console.error("❌ Error fetching members:", err);
-  //     res.status(500).json({ error: "Database error" });
-  //   } else {
-  //     res.json(results);
-  //   }
-  // });
 });
 
 // kachra 1 was were
