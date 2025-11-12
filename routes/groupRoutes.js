@@ -57,7 +57,28 @@ router.delete("/:id", async (req, res) => {
   } catch (err) {
     console.error("Error deleting group:", err);
     res.status(500).json({ error: "Database error" });
+  }  
+});
+
+// PUT /api/group/:id/price
+router.put("/price/:id", async (req, res) => {
+try {
+    const { id } = req.params;
+    const { newPrice } = req.body;
+    
+    if (!id) return res.status(404).json({ error: "Group not found" });
+    
+    if (!id.total_cost || newPrice < id.total_cost) {
+    
+    await db.query("UPDATE ride_groups SET total_cost = ? WHERE id = ?", [newPrice, id]);
+
+    return res.json({ message: "Price updated", total_cost: id.total_cost });
+  } else {
+    return res.status(400).json({ error: "Price must be lower than current total cost" });
   }
+} catch (err) {
+  res.status(500).json({ error: err.message });
+}
 });
 
 export default router;
