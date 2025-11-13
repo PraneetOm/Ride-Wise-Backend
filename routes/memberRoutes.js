@@ -12,6 +12,12 @@ router.post("/", async (req, res) => {
     if (!group_id || !member_name || !member_email) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+
+    const [existing] = await db.query(
+      'SELECT * FROM group_members WHERE user_id = ? AND group_id = ?',
+      [user_id, group_id]
+    );
+    
     const newMember = {
       id: Date.now(), // temporary unique ID
       group_id,
@@ -19,35 +25,38 @@ router.post("/", async (req, res) => {
       member_name,
       member_email,
     };
-    const insertMemberQuery = `
-      INSERT INTO group_members (group_id, user_id, member_name, member_email)
-      VALUES (?, ?, ?, ?)
-    `;
-    db.query(insertMemberQuery, [group_id, user_id ?? null, member_name, member_email], (err) => {
-      if (err) return res.status(500).send("Error adding member");    
-    });
+    
+    if (existing.length == 0) {
+      const insertMemberQuery = `
+        INSERT INTO group_members (group_id, user_id, member_name, member_email)
+        VALUES (?, ?, ?, ?)
+      `;
+      db.query(insertMemberQuery, [group_id, user_id ?? null, member_name, member_email], (err) => {
+        if (err) return res.status(500).send("Error adding member");    
+      });
 
-    // Increment group member count
-    const updateGroupQuery = `
-      UPDATE ride_groups 
-      SET number_of_members = number_of_members + 1 
-      WHERE id = ?
-    `;
-    db.query(updateGroupQuery, [group_id], (err) => {
-      if (err) return res.status(500).send("Error updating member count");
-      console.log("✅ New member joined:", newMember);
+      // Increment group member count
+      const updateGroupQuery = `
+        UPDATE ride_groups 
+        SET number_of_members = number_of_members + 1 
+        WHERE id = ?
+      `;
+      db.query(updateGroupQuery, [group_id], (err) => {
+        if (err) return res.status(500).send("Error updating member count");
+        console.log("✅ New member joined:", newMember);
 
-      // 🔔 Broadcast realtime updates if io is available
-      try {
-        const io = req.app?.locals?.io;
-        if (io) {
-          io.to(`group_${group_id}`).emit("member-added", newMember);
-          io.to(`group_${group_id}`).emit("group-count-updated", { group_id, change: 1 });
-          // Also notify all clients (e.g., GroupList pages) to refresh
-          io.emit("groups-refresh");
-        }
-      } catch {}
-    });
+        // 🔔 Broadcast realtime updates if io is available
+        try {
+          const io = req.app?.locals?.io;
+          if (io) {
+            io.to(`group_${group_id}`).emit("member-added", newMember);
+            io.to(`group_${group_id}`).emit("group-count-updated", { group_id, change: 1 });
+            // Also notify all clients (e.g., GroupList pages) to refresh
+            io.emit("groups-refresh");
+          }
+        } catch {}
+      });
+    }
     // ✅ Send response
     res.status(201).json({ member: newMember });
     
@@ -61,41 +70,37 @@ router.post("/", async (req, res) => {
 router.get("/group/:group_id", async (req, res) => {
     try {
       const { group_id } = req.params;
-      const [rows] = await db.query("SELECT * FROM group_members WHERE group_id = ?", [group_id]);
+      const [rows] = await db.query("SELECT * FROM group_members WHERE group_id = ?", [group_id]); // , [group_id]
       res.json(rows || {});
     } catch (err) {
       console.error("❌ Error fetching members:", err);
       res.status(500).json({ error: "Database error" });
     }
-});
-
-// kachra 1 was were
 
 router.post("/leave_user", (req, res) => {
   const { group_id, user_id } = req.body; // body, NOT params
   console.log("🔔 /leave_user called with:", { group_id, user_id });
-
+  
   if (!group_id || !user_id) {
     console.log("❌ missing group_id or user_id");
     return res.status(400).json({ error: "Missing group_id or user_id" });
   }
-
+  
   const deleteQuery = `
-    DELETE FROM group_members
-    WHERE group_id = ? AND user_id = ?
+  DELETE FROM group_members
+  WHERE group_id = ? AND user_id = ?
   `;
-
+  
   db.query(deleteQuery, [group_id, user_id], (delErr, delResult) => {
     if (delErr) {
       console.error("❌ Error deleting member:", delErr);
       return res.status(500).json({ error: "Database error while deleting member" });
     }
-
+    
     if (!delResult || delResult.affectedRows === 0) {
       console.log("⚠️ member not found to delete");
       return res.status(404).json({ message: "Member not found in this group" });
     }
-
     
     // Emit socket event if io is available
     try {
@@ -106,11 +111,11 @@ router.post("/leave_user", (req, res) => {
         // Notify all clients (e.g., GroupList pages) to refresh counts
         io.emit("groups-refresh");
       }
+      return res.status(200).json({ message: "Left group successfully" });
     } catch (emitErr) {
       console.warn("⚠️ Could not emit socket event:", emitErr);
     }
     
-    return res.status(200).json({ message: "Left group successfully" });
   });
   // decrement safely (no negative)
   const updateGroupQuery = `
@@ -128,6 +133,4 @@ router.post("/leave_user", (req, res) => {
     console.log(`✅ User ${user_id} removed from group ${group_id}`);
   });
 });
-
-
 export default router;
