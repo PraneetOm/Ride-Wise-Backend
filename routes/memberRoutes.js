@@ -25,7 +25,7 @@ router.post("/", async (req, res) => {
       member_name,
       member_email,
     };
-    
+
     if (existing.length == 0) {
       const insertMemberQuery = `
         INSERT INTO group_members (group_id, user_id, member_name, member_email)
@@ -76,6 +76,7 @@ router.get("/group/:group_id", async (req, res) => {
       console.error("❌ Error fetching members:", err);
       res.status(500).json({ error: "Database error" });
     }
+});
 
 router.post("/leave_user", (req, res) => {
   const { group_id, user_id } = req.body; // body, NOT params
